@@ -172,7 +172,7 @@ case \$1 in
       echo "User \$fakeuser_login already exists" > /dev/stderr
       continue
     fi
-    fakeuser_home="$fudir/\$fakeuser_login"
+    fakeuser_home="$fu_dir/\$fakeuser_login"
     fakeuser_shell="\$SHELL" # using admin's current shell
     
     mkdir -p "\$fakeuser_home/.ssh"
