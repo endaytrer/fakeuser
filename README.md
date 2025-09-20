@@ -12,7 +12,7 @@ Each fake user have a unique SSH key pair that is only accessible by the fake us
 ### Quick start
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/endaytrer/fakeuser/main/fakeuser.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/endaytrer/fakeuser/main/fakeuser.sh)"
 # follow the instruction to create fake user `admin`
 ./login
 # enter `admin` as the login, and the password you set in the previous step
