@@ -22,6 +22,22 @@ if ! command -v openssl &> /dev/null; then
 fi
 echo "ok"
 
+echo -n "Checking openssl passwd algorithm support..."
+if openssl passwd -6 -in /dev/null &> /dev/null; then
+  openssl_passwd_flags="-6"
+  salt_len=16
+elif openssl passwd -5 -in /dev/null &> /dev/null; then
+  openssl_passwd_flags="-5"
+  salt_len=16
+elif openssl passwd -1 -in /dev/null &> /dev/null; then
+  openssl_passwd_flags="-1"
+  salt_len=8
+else
+  echo "Error: openssl passwd algorithm support check failed. Please install openssl with support for -6, -5, or -1 algorithms and try again."
+  exit 1
+fi
+echo "selected openssl passwd algorithm: $openssl_passwd_flags"
+
 echo -n "Checking for ssh-keygen..."
 if ! command -v ssh-keygen &> /dev/null; then
   echo "Error: ssh-keygen is required but not installed. Please install it and try again."
@@ -98,8 +114,8 @@ while true; do
         fi
         echo "Error: password and confirm password not match. Please try again." > /dev/stderr
       done
-      SALT=\$(openssl rand -base64 16)
-      HASH=\$(openssl passwd -6 -salt \$SALT \$fakeuser_passwd)
+      SALT=\$(openssl rand -base64 16 | head -c $salt_len)
+      HASH=\$(openssl passwd $openssl_passwd_flags -salt \$SALT \$fakeuser_passwd)
       
       rm -f "\$fakeuser_home/.ssh/id_ed25519"
       rm -f "\$fakeuser_home/.ssh/id_ed25519.pub"
@@ -122,15 +138,7 @@ while true; do
     echo
     crypt_method=\$(echo \$target_hash | cut -d$ -f2)
     salt=\$(echo \$target_hash | cut -d$ -f3)
-    if [[ \$crypt_method == "6" ]]; then
-      salted_hash=\$(echo -n \$fakeuser_passwd | openssl passwd -6 -salt \$salt \$fakeuser_passwd)
-    elif [[ \$crypt_method == "1" ]]; then
-      salted_hash=\$(echo -n \$fakeuser_passwd | openssl passwd -1 -salt \$salt \$fakeuser_passwd)
-    else
-      echo "Unsupported crypto method \$crypt_method" > /dev/stderr
-      echo "The fakeuser shadow is corrupted. Please contact admin." > /dev/stderr
-      exit 1
-    fi
+    salted_hash=\$(echo -n \$fakeuser_passwd | openssl passwd -\$crypt_method -salt \$salt \$fakeuser_passwd)
     if [[ \$salted_hash = \$target_hash ]]; then
       CORRECT=1
       break
@@ -279,8 +287,8 @@ while true; do
   fi
   echo "Error: password and confirm password not match. Please try again." > /dev/stderr
 done
-SALT=$(openssl rand -base64 16)
-ADMIN_HASH=$(openssl passwd -6 -salt $SALT $admin_password)
+SALT=$(openssl rand -base64 16 | head -c $salt_len)
+ADMIN_HASH=$(openssl passwd $openssl_passwd_flags -salt $SALT $admin_password)
 echo "admin:$ADMIN_HASH:$admin_home:$admin_shell" >> "$fu_shadow"
 
 rm -f "$admin_home/.ssh/id_ed25519"
